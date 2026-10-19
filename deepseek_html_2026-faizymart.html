@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faizy Mart | فیضی مارٹ</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary-yellow: #facc15; --dark-bg: #111827; --card-bg: #1f2937;
+    --text-light: #f3f4f6; --text-muted: #9ca3af; --accent-blue: #3b82f6;
+    --green: #4ade80; --red: #ef4444; --amber: #f59e0b;
+  }
+  body {
+    font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Segoe UI", Tahoma, sans-serif;
+    background: var(--dark-bg); color: var(--text-light); padding-bottom: 40px; line-height: 1.9;
+    min-height: 100vh; transition: margin-right 0.3s ease;
+  }
+  .sidebar {
+    position: fixed; top: 0; right: -280px; width: 280px; height: 100vh;
+    background: #000; border-left: 2px solid var(--primary-yellow); z-index: 1000;
+    transition: right 0.3s ease; padding: 20px; overflow-y: auto;
+  }
+  .sidebar.open { right: 0; }
+  .sidebar h3 { color: var(--primary-yellow); text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+  .sidebar .tab-btn {
+    display: block; width: 100%; padding: 12px 15px; margin-bottom: 8px;
+    background: transparent; color: var(--text-light); border: none; border-radius: 8px;
+    text-align: right; font-family: inherit; font-size: 15px; cursor: pointer; transition: 0.2s;
+  }
+  .sidebar .tab-btn:hover { background: #222; color: var(--primary-yellow); }
+  .sidebar .tab-btn.active { background: var(--primary-yellow); color: #000; font-weight: bold; }
+  .sidebar .admin-only, .sidebar .sub-admin-only, .sidebar .super-only { display: none; }
+  body.is-super-admin .sidebar .admin-only,
+  body.is-super-admin .sidebar .super-only,
+  body.is-sub-admin .sidebar .sub-admin-only { display: block; }
+  body.is-super-admin .sidebar .sub-admin-only { display: none; }
+
+  /* ===== ہیڈر ===== */
+  header {
+    background: #000; color: var(--text-light); padding: 15px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 3px solid var(--primary-yellow); position: sticky; top: 0; z-index: 100;
+  }
+  .menu-btn { background: transparent; border: 2px solid var(--primary-yellow); color: var(--primary-yellow); font-size: 20px; padding: 5px 12px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+  .menu-btn:hover { background: var(--primary-yellow); color: #000; }
+  header h1 { font-size: 22px; color: var(--primary-yellow); font-weight: 700; }
+
+  /* ===== ہیڈر لوگو (گول + بارڈر، صرف ایڈمن کلک کر سکتا) ===== */
+  header .logo-wrap {
+    position: relative;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 3px solid var(--primary-yellow);
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 0 0 3px #000, 0 0 15px rgba(250, 204, 21, 0.4);
+    transition: 0.3s;
+  }
+  header .logo-wrap.admin-clickable { cursor: pointer; }
+  header .logo-wrap.admin-clickable:hover { transform: scale(1.08); box-shadow: 0 0 0 3px #000, 0 0 22px rgba(250, 204, 21, 0.8); }
+  header .logo-wrap img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  header .logo-wrap .logo-fallback {
+    color: var(--primary-yellow); font-size: 10px; text-align: center; line-height: 1.2;
+    font-family: inherit; padding: 4px;
+  }
+  header .logo-wrap .logo-edit-hint {
+    position: absolute; bottom: -2px; left: -2px;
+    background: var(--primary-yellow); color: #000;
+    border-radius: 50%; width: 18px; height: 18px;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+    border: 2px solid #000; font-weight: bold;
+  }
+
+  .admin-bar { background: #000; color: var(--primary-yellow); padding: 8px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; border-bottom: 1px solid #333; }
+  .admin-login-btn { background: var(--primary-yellow); color: #000; border: none; padding: 5px 15px; border-radius: 15px; cursor: pointer; font-family: inherit; font-weight: bold; }
+  .admin-logout-btn { background: #ef4444; color: #fff; border: none; padding: 5px 15px; border-radius: 15px; cursor: pointer; font-family: inherit; font-weight: bold; display: none; }
+
+  .tab-content { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.4s; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  h2 { margin-bottom: 20px; color: var(--primary-yellow); font-size: 24px; text-align: center; }
+  h3 { margin: 20px 0 15px; color: var(--primary-yellow); font-size: 18px; }
+
+  /* ===== کیٹگری کارڈز (گول + بارڈر) ===== */
+  .category-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; margin: 20px auto; }
+  .cat-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 22px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 3px solid var(--primary-yellow);
+    box-shadow: 0 0 0 2px #000, 0 8px 20px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .cat-card::before {
+    content: ""; position: absolute; inset: 6px;
+    border: 1px dashed rgba(250, 204, 21, 0.35);
+    border-radius: 18px; pointer-events: none;
+  }
+  .cat-card:hover {
+    transform: translateY(-6px) scale(1.03);
+    border-color: #fde047;
+    box-shadow: 0 0 0 2px #000, 0 14px 28px rgba(250, 204, 21, 0.35);
+  }
+  .cat-card .icon { font-size: 52px; margin-bottom: 10px; display: block; }
+  .cat-card h3 { color: var(--primary-yellow); font-size: 15px; margin: 0; }
+  .cat-card .count-badge {
+    background: #000; color: var(--primary-yellow);
+    padding: 3px 12px; border-radius: 12px; font-size: 12px;
+    margin-top: 10px; display: inline-block;
+    border: 1.5px solid var(--primary-yellow);
+  }
+
+  /* ===== پروڈکٹ کارڈز (گول + بارڈر) ===== */
+  .product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 18px; margin-top: 15px; }
+  .product-item {
+    background: var(--card-bg);
+    border-radius: 22px;
+    border: 2.5px solid var(--primary-yellow);
+    position: relative; transition: 0.3s; overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .product-item:hover {
+    transform: translateY(-5px); border-color: #fde047;
+    box-shadow: 0 12px 24px rgba(250, 204, 21, 0.3);
+  }
+  .product-img-box {
+    width: 100%; height: 180px; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; border-radius: 18px 18px 0 0;
+    border-bottom: 2px solid #333;
+  }
+  .product-img-box img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+  .product-item:hover .product-img-box img { transform: scale(1.1); }
+  .product-info { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+  .product-item h4 { color: var(--primary-yellow); margin-bottom: 5px; font-size: 16px; }
+  .product-item p { font-size: 13px; color: var(--text-muted); margin: 2px 0; flex-grow: 1; }
+  .product-item .price { color: var(--green); font-weight: 700; margin-top: 10px; display: block; font-size: 16px; background: #000; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+  .product-item .inactive-badge { position: absolute; top: 10px; right: 10px; background: var(--red); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; z-index: 2; }
+  .order-btn { display: block; width: 100%; margin-top: 8px; padding: 8px; background: var(--primary-yellow); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; transition: 0.3s; font-family: inherit; font-size: 13px; }
+  .order-btn:hover { background: #eab308; }
+  .order-btn:disabled { background: #555; color: #999; cursor: not-allowed; }
+  .product-item .delete-prod { position: absolute; top: 8px; left: 8px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 14px; z-index: 2; }
+  .category-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding: 20px; border-radius: 22px; background: var(--card-bg); border: 2.5px solid var(--primary-yellow); }
+  .category-header h2 { color: var(--primary-yellow); margin: 0; }
+
+  /* ===== ایمپلائی/سیلری کارڈز (گول + بارڈر) ===== */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--card-bg);
+    border-radius: 22px;
+    padding: 18px;
+    border: 2.5px solid var(--primary-yellow);
+    position: relative; transition: 0.3s;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .card:hover { border-color: #fde047; transform: translateY(-4px); box-shadow: 0 12px 24px rgba(250, 204, 21, 0.25); }
+  .card.inactive { opacity: 0.65; border-color: #6b7280; }
+  .card h3 { margin: 0 0 10px; color: var(--primary-yellow); font-size: 18px; }
+  .card p { margin: 4px 0; font-size: 13px; color: var(--text-muted); }
+  .card .fm-id { display: inline-block; background: var(--primary-yellow); color: #000; padding: 2px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; margin-bottom: 8px; direction: ltr; }
+  .card .badge { display: inline-block; margin-top: 8px; padding: 3px 10px; background: #000; color: var(--primary-yellow); border-radius: 5px; font-size: 12px; font-weight: 600; border: 1px solid #333; }
+  .card .badge.green { background: #052e16; color: var(--green); border-color: #166534; }
+  .card .badge.amber { background: #422006; color: var(--amber); border-color: #92400e; }
+  .card .badge.red { background: #450a0a; color: var(--red); border-color: #991b1b; }
+  .edit-btn, .delete-btn, .toggle-btn { border: none; border-radius: 5px; padding: 3px 8px; cursor: pointer; font-size: 11px; font-family: inherit; }
+  .edit-btn { background: var(--accent-blue); color: #fff; }
+  .delete-btn { background: var(--red); color: #fff; }
+  .toggle-btn { background: var(--amber); color: #000; }
+  .card-actions { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
+
+  .salary-card {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2.5px solid var(--primary-yellow);
+    border-radius: 22px; padding: 18px; margin-top: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .salary-card.pending {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25), 0 6px 16px rgba(0,0,0,0.5);
+  }
+  .salary-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed #374151; }
+  .salary-row:last-child { border-bottom: none; }
+  .salary-row strong { color: var(--text-light); }
+  .salary-row span { color: var(--primary-yellow); font-weight: bold; }
+  .salary-progress { height: 8px; background: #000; border-radius: 10px; overflow: hidden; margin: 8px 0; }
+  .salary-progress > div { height: 100%; background: linear-gradient(90deg, var(--amber), var(--green)); border-radius: 10px; transition: 0.5s; }
+  .salary-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .salary-btn { padding: 8px 14px; background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: inherit; font-size: 12px; flex: 1; min-width: 100px; }
+  .salary-btn.green { background: linear-gradient(135deg, #22c55e, #4ade80); }
+  .salary-btn.red { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; }
+  .salary-btn:hover { opacity: 0.9; }
+
+  .status-btn { padding: 6px 12px; border: none; border-radius: 20px; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; display: inline-flex; align-items: center; gap: 5px; }
+  .status-btn.pending { background: #fef08a; color: #854d0e; }
+  .status-btn.dispatched { background: #bfdbfe; color: #1e40af; }
+  .status-btn.delivered { background: #bbf7d0; color: #166534; }
+  .status-btn.cancelled { background: #fecaca; color: #991b1b; }
+  .status-btn.returned { background: #e9d5ff; color: #6b21a8; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 1px solid #333; }
+  th, td { padding: 10px; text-align: right; border-bottom: 1px solid #333; font-size: 13px; color: var(--text-light); }
+  th { background: #000; color: var(--primary-yellow); }
+  tr:hover td { background: #2d3748; }
+
+  form { max-width: 700px; background: var(--card-bg); padding: 20px; border-radius: 22px; margin-bottom: 20px; border: 2px solid var(--primary-yellow); }
+  form label { display: block; margin-bottom: 12px; font-weight: 600; color: var(--primary-yellow); font-size: 14px; }
+  form input, form select, form textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #444; border-radius: 8px; font-size: 14px; font-family: inherit; background: #111; color: var(--text-light); }
+  form input:focus, form select:focus, form textarea:focus { outline: none; border-color: var(--primary-yellow); }
+  form input[dir="ltr"] { text-align: left; }
+  form input[readonly] { background: #333; color: #aaa; cursor: not-allowed; }
+  form button { width: 100%; padding: 12px; background: var(--primary-yellow); color: #000; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; margin-top: 10px; font-family: inherit; font-weight: bold; }
+  form button:hover { background: #eab308; }
+  .radio-group { display: flex; gap: 15px; margin-top: 5px; flex-wrap: wrap; }
+  .radio-group label { display: flex; align-items: center; gap: 5px; font-weight: normal; margin-bottom: 0; cursor: pointer; color: var(--text-muted); }
+  .radio-group input[type="radio"] { width: auto; margin: 0; accent-color: var(--primary-yellow); }
+
+  .search-box { text-align: center; margin-bottom: 20px; }
+  #searchInput, #empSearchInput, #reportSearchInput { padding: 12px 20px; width: 100%; max-width: 500px; border: 1px solid #333; border-radius: 25px; font-size: 14px; margin-bottom: 10px; font-family: inherit; background: #111; color: var(--text-light); }
+  #searchInput:focus, #empSearchInput:focus, #reportSearchInput:focus { outline: none; border-color: var(--primary-yellow); }
+
+  .result-box { background: var(--card-bg); padding: 15px; border-radius: 14px; margin-bottom: 10px; border: 1px solid #333; border-right: 4px solid var(--primary-yellow); }
+  .result-box p { margin: 4px 0; font-size: 14px; color: var(--text-muted); }
+  .result-box.error { border-right-color: var(--red); color: var(--red); text-align: center; }
+  .empty-msg { padding: 15px; background: #000; border-radius: 10px; color: #666; font-size: 14px; text-align: center; border: 1px dashed #333; }
+
+  .print-btn { padding: 6px 10px; background: var(--accent-blue); color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; margin-right: 5px; font-family: inherit; }
+  .del-btn { padding: 6px 10px; background: var(--red); color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-family: inherit; }
+  .main-print-btn { padding: 8px 16px; background: var(--primary-yellow); color: #000; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 15px; font-weight: 600; font-family: inherit; }
+  .export-btn { padding: 8px 16px; background: var(--green); color: #000; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 15px; font-weight: 600; font-family: inherit; }
+  .backup-btn { padding: 8px 16px; background: var(--accent-blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 15px; font-weight: 600; font-family: inherit; }
+
+  #receipt-area { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #receipt-area, #receipt-area * { visibility: visible; }
+    #receipt-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; padding: 0; margin: 0; background: #fff; color: #000; }
+    .receipt-box { border: 3px solid #000; padding: 30px; max-width: 700px; margin: 20px auto; border-radius: 15px; background: #fff; }
+    .receipt-header { text-align: center; border-bottom: 3px solid #facc15; padding-bottom: 15px; margin-bottom: 20px; background: #000; color: #fff; padding: 15px; border-radius: 10px; }
+    .receipt-header h2 { color: #facc15 !important; margin: 0; font-size: 28px; }
+    .receipt-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 10px 0; font-size: 15px; color: #000; }
+    .receipt-row strong { width: 40%; color: #000; }
+    .receipt-total { display: flex; justify-content: space-between; padding: 15px 0; margin-top: 15px; border-top: 2px solid #000; border-bottom: 2px solid #000; font-size: 18px; font-weight: bold; color: #000; }
+    .receipt-footer { text-align: center; margin-top: 30px; font-size: 14px; border-top: 2px dashed #ccc; padding-top: 15px; color: #000; }
+    .receipt-footer h3 { color: #000; }
+  }
+
+  .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; }
+  .overlay.show { display: block; }
+
+  .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card-bg); padding: 25px; border-radius: 22px; z-index: 1001; max-width: 500px; width: 90%; border: 3px solid var(--primary-yellow); max-height: 90vh; overflow-y: auto; }
+  .modal.show { display: block; }
+  .modal h3 { margin-top: 0; }
+  .modal .close-modal { position: absolute; top: 10px; left: 10px; background: var(--red); color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 18px; }
+    table { font-size: 12px; }
+    th, td { padding: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- سائیڈ بار -->
+<aside class="sidebar" id="sidebar">
+  <h3>مینو</h3>
+  <button class="tab-btn active" data-tab="home" onclick="showTab('home')">🏠 ہوم</button>
+  <button class="tab-btn" data-tab="addOrder" onclick="showTab('addOrder')">➕ نیا آرڈر</button>
+  <button class="tab-btn admin-only" data-tab="addEmployee" onclick="showTab('addEmployee')">➕ نیا ایمپلائی</button>
+  <button class="tab-btn admin-only" data-tab="employees" onclick="showTab('employees')">👥 تمام ایمپلائیز</button>
+  <button class="tab-btn admin-only" data-tab="orders" onclick="showTab('orders')">🧾 تمام آرڈرز</button>
+  <button class="tab-btn admin-only" data-tab="monthlyOrders" onclick="showTab('monthlyOrders')">📅 مہینے کے آرڈرز</button>
+  <button class="tab-btn admin-only" data-tab="empSearch" onclick="showTab('empSearch')">👤 ایمپلائی سرچ</button>
+  <button class="tab-btn admin-only" data-tab="salary" onclick="showTab('salary')">💰 سیلری مینجمنٹ</button>
+  <button class="tab-btn admin-only" data-tab="reports" onclick="showTab('reports')">📊 رپورٹس</button>
+  <button class="tab-btn admin-only" data-tab="search" onclick="showTab('search')">🔍 آرڈر سرچ</button>
+  <button class="tab-btn admin-only" data-tab="manageAdmins" onclick="showTab('manageAdmins')">⚙️ ایڈمن مینجمنٹ</button>
+  <button class="tab-btn super-only" onclick="resetBrandLogo()">🖼️ لوگو ڈیفالٹ کریں</button>
+  <button class="tab-btn super-only" data-tab="backup" onclick="showTab('backup')">💾 بیک اپ / ریسٹور</button>
+  <button class="tab-btn sub-admin-only" data-tab="myProfile" onclick="showTab('myProfile')">👤 میری پروفائل</button>
+</aside>
+
+<header>
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <h1>FAIZY MART</h1>
+  <div class="logo-wrap" id="headerLogo" title="فیضی مارٹ">
+    <img id="headerLogoImg" src="" alt="Logo" style="display:none;" />
+    <div class="logo-fallback" id="logoFallback">فیضی<br>مارٹ</div>
+    <span class="logo-edit-hint" id="logoEditHint" style="display:none;">✎</span>
+  </div>
+</header>
+
+<div class="admin-bar">
+  <span id="adminStatusText">👋 خوش آمدید!</span>
+  <div>
+    <button class="admin-login-btn" id="adminLoginBtn" onclick="adminLogin()">🔐 ایڈمن لاگ ان</button>
+    <button class="admin-logout-btn" id="adminLogoutBtn" onclick="adminLogout()">🚪 لاگ آؤٹ</button>
+  </div>
+</div>
+
+<!-- ===== ہوم ===== -->
+<section id="home" class="tab-content active">
+  <h2>فیضی مارٹ میں خوش آمدید</h2>
+  <div class="category-cards">
+    <div class="cat-card" onclick="openCategory('COSMETICS')"><span class="icon">💄</span><h3>COSMETICS</h3><span class="count-badge" id="count-cosmetics">0</span></div>
+    <div class="cat-card" onclick="openCategory('DRONES')"><span class="icon">🚁</span><h3>DRONES</h3><span class="count-badge" id="count-drones">0</span></div>
+    <div class="cat-card" onclick="openCategory('TOYS')"><span class="icon">🧸</span><h3>TOYS</h3><span class="count-badge" id="count-toys">0</span></div>
+    <div class="cat-card" onclick="openCategory('GADGETS')"><span class="icon">🎧</span><h3>GADGETS</h3><span class="count-badge" id="count-gadgets">0</span></div>
+    <div class="cat-card" onclick="openCategory('HOME PRODUCTS')"><span class="icon">🏠</span><h3>HOME</h3><span class="count-badge" id="count-home">0</span></div>
+  </div>
+  <div id="publicTargetBanner" style="text-align:center; margin-top:20px; padding:15px; background:var(--card-bg); border-radius:16px; border:1px solid #333;">
+    <p style="color:var(--text-muted); font-size:13px;">ہدف کی معلومات صرف ایڈمن کے لیے دستیاب ہے</p>
+  </div>
+</section>
+
+<!-- ===== کیٹگری تفصیل ===== -->
+<section id="categoryDetail" class="tab-content">
+  <button class="back-btn" style="background:#333; color:#facc15; border:none; padding:8px 16px; border-radius:20px; margin-bottom:15px; cursor:pointer; font-family:inherit;" onclick="showTab('home')">← واپس ہوم</button>
+  <div class="category-header" id="catHeader">
+    <span class="icon" id="catHeaderIcon" style="font-size:40px;">🚁</span>
+    <h2 id="catHeaderTitle">DRONES</h2>
+  </div>
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+    <h3 id="catProductsTitle" style="margin:0;">پروڈکٹس</h3>
+    <button class="main-print-btn admin-only" onclick="openAddProductModal()">➕ نیا آئٹم شامل کریں</button>
+  </div>
+  <form id="addProductForm" style="display:none; border:2px solid #facc15; max-width:100%;">
+    <h3 style="margin-top:0; color:#facc15;">نیا آئٹم شامل کریں</h3>
+    <input type="hidden" id="prodCat" />
+    <label>آئٹم کا نام <input type="text" id="prodName" required placeholder="نام" /></label>
+    <label>پروڈکٹ کوڈ <input type="text" id="prodCode" placeholder="مثلاً FM-COS-001" dir="ltr" /></label>
+    <label>تفصیل <input type="text" id="prodDesc" required placeholder="تفصیل" /></label>
+    <label>خریداری لاگت (روپے) <input type="number" id="prodCost" min="0" placeholder="خریداری قیمت" /></label>
+    <label>پبلک فروخت قیمت (روپے) <input type="number" id="prodPrice" required min="0" placeholder="گاہک کے لیے" /></label>
+    <label>ایمپلائی قیمت (روپے) <input type="number" id="prodEmpPrice" min="0" placeholder="ملازم کے لیے" /></label>
+    <label>اسٹاک مقدار <input type="number" id="prodStock" min="0" value="0" /></label>
+    <label>طول و عرض (اختیاری) <input type="text" id="prodDim" placeholder="مثلاً 10x5x3 cm" /></label>
+    <label>دستیابی
+      <select id="prodActive"><option value="true">فعال</option><option value="false">غیر فعال</option></select>
+    </label>
+    <label>تصویر 1 <input type="file" id="prodImg1" accept="image/*" style="background:#111; color:#fff;" /></label>
+    <label>تصویر 2 <input type="file" id="prodImg2" accept="image/*" style="background:#111; color:#fff;" /></label>
+    <label>تصویر 3 <input type="file" id="prodImg3" accept="image/*" style="background:#111; color:#fff;" /></label>
+    <label>تصویر 4 <input type="file" id="prodImg4" accept="image/*" style="background:#111; color:#fff;" /></label>
+    <label>تصویر 5 <input type="file" id="prodImg5" accept="image/*" style="background:#111; color:#fff;" /></label>
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button type="submit" style="background:#4ade80; color:#000;">محفوظ کریں</button>
+      <button type="button" onclick="closeAddProductModal()" style="background:#ef4444; color:#fff;">منسوخ کریں</button>
+    </div>
+  </form>
+  <div class="product-list" id="productList"></div>
+</section>
+
+<!-- نیا ایمپلائی -->
+<section id="addEmployee" class="tab-content">
+  <h2>نیا ایمپلائی شامل کریں</h2>
+  <form id="employeeForm">
+    <label>ایمپلائی ID (خودکار) <input type="text" id="empId" readonly style="text-align:center; font-weight:bold;" /></label>
+    <label>مکمل نام <input type="text" id="empName" required /></label>
+    <label>عمر <input type="number" id="empAge" required min="18" max="80" /></label>
+    <label>شہر <input type="text" id="empCity" required /></label>
+    <label>پتہ <textarea id="empAddress" rows="2"></textarea></label>
+    <label>موبائل نمبر <input type="tel" id="empMobile" required placeholder="03001234567" dir="ltr" style="text-align:left;" /></label>
+    <label>ای میل (اختیاری) <input type="email" id="empEmail" dir="ltr" style="text-align:left;" /></label>
+    <label>شعبہ <input type="text" id="empDept" required placeholder="جیسے سیلز" /></label>
+    <label>بنیادی سیلری (روپے) <input type="number" id="empSalary" required min="0" value="20000" /></label>
+    <label>ماہانہ ٹارگٹ (آرڈرز) <input type="number" id="empTarget" required min="1" value="40" /></label>
+    <label>بینک اکاؤنٹ ٹائٹل <input type="text" id="empAccName" required /></label>
+    <label>بینک کا نام <input type="text" id="empBank" /></label>
+    <label>اکاؤنٹ نمبر / IBAN <input type="text" id="empAccNo" required dir="ltr" style="text-align:left;" /></label>
+    <label>لاگ ان پاس ورڈ (ایڈمن بننے کے لیے) <input type="password" id="empPass" required dir="ltr" style="text-align:left;" /></label>
+    <button type="submit">محفوظ کریں</button>
+  </form>
+</section>
+
+<!-- ایمپلائیز کی فہرست -->
+<section id="employees" class="tab-content">
+  <h2>تمام ایمپلائیز</h2>
+  <div style="text-align:center; margin-bottom:15px;">
+    <span id="totalTargetDisplay" class="badge" style="font-size:14px; padding:8px 16px;"></span>
+  </div>
+  <div id="employeeList" class="card-grid"></div>
+</section>
+
+<!-- آرڈرز -->
+<section id="orders" class="tab-content">
+  <h2>تمام آرڈرز</h2>
+  <div style="overflow-x:auto;">
+    <table id="ordersTable">
+      <thead><tr><th>آرڈر نمبر</th><th>کسٹمر</th><th>پروڈکٹ</th><th>رقم</th><th>پیمنٹ</th><th>اسٹیٹس</th><th>ایکشن</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- مہینے کے آرڈرز -->
+<section id="monthlyOrders" class="tab-content">
+  <h2>📅 مہینے کے آرڈرز</h2>
+  <div style="text-align:center; margin-bottom: 20px;">
+    <label style="color:#facc15;">مہینہ: <input type="month" id="monthlyOrdersFilter" style="background:#111; color:#fff; border:1px solid #333; padding:5px; font-family:inherit;" /></label>
+  </div>
+  <div style="overflow-x:auto;">
+    <table id="monthlyOrdersTable">
+      <thead><tr><th>تاریخ</th><th>آرڈر نمبر</th><th>کسٹمر</th><th>ایڈریس</th><th>پروڈکٹ</th><th>رقم</th><th>اسٹیٹس</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ایمپلائی سرچ -->
+<section id="empSearch" class="tab-content">
+  <h2>👤 ایمپلائی سرچ</h2>
+  <div class="search-box">
+    <select id="empSearchSelect" style="padding:12px; width:100%; max-width:400px; border-radius:10px; background:#111; color:#fff; border:1px solid #333; font-family:inherit;">
+      <option value="">-- ایمپلائی منتخب کریں --</option>
+    </select>
+  </div>
+  <div id="empSearchResult"></div>
+</section>
+
+<!-- ===== سیلری مینجمنٹ ===== -->
+<section id="salary" class="tab-content">
+  <h2>💰 سیلری مینجمنٹ</h2>
+  <div style="text-align:center; margin-bottom:15px;">
+    <span id="salaryTargetDisplay" class="badge" style="font-size:13px; padding:6px 14px;"></span>
+  </div>
+  <div id="salaryList" class="card-grid"></div>
+</section>
+
+<!-- نیا آرڈر -->
+<section id="addOrder" class="tab-content">
+  <h2>نیا آرڈر شامل کریں</h2>
+  <form id="orderForm">
+    <label>آرڈر نمبر (خودکار) <input type="text" id="orderNo" readonly style="text-align:center; font-weight:bold;" /></label>
+    <label>آرڈر کرنے والا کون ہے؟
+      <div class="radio-group">
+        <label><input type="radio" name="empType" value="employee" checked /> ایمپلائی</label>
+        <label><input type="radio" name="empType" value="non-employee" /> نان ایمپلائی (پبلک)</label>
+      </div>
+    </label>
+    <div id="employeeSelectBox"><label>ایمپلائی منتخب کریں <select id="empSelect"></select></label></div>
+    <div id="nonEmployeeBox" style="display:none;">
+      <label>نان ایمپلائی کا نام <input type="text" id="nonEmpName" placeholder="نام" /></label>
+      <label>نان ایمپلائی کا موبائل <input type="tel" id="nonEmpMobile" placeholder="موبائل" dir="ltr" style="text-align:left;" /></label>
+    </div>
+    <hr style="margin: 15px 0; border: 1px solid #333;" />
+    <label>کسٹمر کا نام <input type="text" id="customer" required /></label>
+    <label>کسٹمر موبائل <input type="tel" id="customerMobile" required dir="ltr" style="text-align:left;" /></label>
+    <label>ڈیلیوری ایڈریس <textarea id="address" required rows="2"></textarea></label>
+    <label>شہر <input type="text" id="city" required /></label>
+    <hr style="margin: 15px 0; border: 1px solid #333;" />
+    <label>کیٹگری
+      <select id="categorySelect" required>
+        <option value="">-- منتخب کریں --</option>
+        <option value="COSMETICS">💄 COSMETICS</option>
+        <option value="DRONES">🚁 DRONES</option>
+        <option value="TOYS">🧸 TOYS</option>
+        <option value="GADGETS">🎧 GADGETS</option>
+        <option value="HOME PRODUCTS">🏠 HOME PRODUCTS</option>
+      </select>
+    </label>
+    <label>پروڈکٹ کا نام <input type="text" id="product" required /></label>
+    <label>مقدار <input type="number" id="qty" min="1" value="1" required /></label>
+    <label>رقم (روپے) <input type="number" id="amount" required min="0" /></label>
+    <label>ڈسکاؤنٹ (روپے) <input type="number" id="discount" min="0" value="0" /></label>
+    <label>ڈیلیوری چارجز <input type="number" id="deliveryCharge" min="0" value="0" /></label>
+    <label>پیمنٹ
+      <select id="paymentMethod" required>
+        <option value="کیش آن ڈیلیوری">کیش آن ڈیلیوری</option>
+        <option value="ایڈوانس پیمنٹ">ایڈوانس پیمنٹ</option>
+        <option value="آن لائن پیمنٹ">آن لائن پیمنٹ</option>
+      </select>
+    </label>
+    <button type="submit">آرڈر محفوظ کریں اور پرنٹ کریں</button>
+  </form>
+</section>
+
+<!-- رپورٹس -->
+<section id="reports" class="tab-content">
+  <h2>📊 رپورٹس</h2>
+  <div style="text-align:center; margin-bottom:15px;">
+    <input type="text" id="reportSearchInput" placeholder="نام یا آرڈر نمبر سے تلاش کریں..." />
+    <button class="export-btn" onclick="exportCSV()">📥 CSV ایکسپورٹ</button>
+  </div>
+  <div style="overflow-x:auto;"><table id="totalReport"><thead><tr><th>ایمپلائی</th><th>آرڈرز</th><th>رقم</th><th>آرڈر نمبرز</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- آرڈر سرچ -->
+<section id="search" class="tab-content">
+  <h2>🔍 آرڈر سرچ</h2>
+  <div class="search-box"><input type="text" id="searchInput" placeholder="آرڈر نمبر..." /></div>
+  <div id="searchResult"></div>
+</section>
+
+<!-- ایڈمن مینجمنٹ -->
+<section id="manageAdmins" class="tab-content">
+  <h2>⚙️ ایڈمن مینجمنٹ</h2>
+  <div style="overflow-x:auto;"><table id="adminManageTable"><thead><tr><th>ID</th><th>نام</th><th>رول</th><th>ایکشن</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- ===== بیک اپ / ریسٹور ===== -->
+<section id="backup" class="tab-content">
+  <h2>💾 بیک اپ / ریسٹور</h2>
+  <div style="background:var(--card-bg); padding:20px; border-radius:22px; border:2px solid var(--primary-yellow);">
+    <h3 style="margin-top:0;">ڈیٹا بیک اپ</h3>
+    <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">تمام ڈیٹا (ایمپلائیز، آرڈرز، کیٹلاگ، سیلری، ایڈمنز، لوگو) کو JSON فائل میں محفوظ کریں۔</p>
+    <button class="backup-btn" onclick="exportBackup()">📥 بیک اپ ڈاؤن لوڈ کریں</button>
+    <hr style="margin:20px 0; border-color:#333;">
+    <h3>ڈیٹا ریسٹور</h3>
+    <p style="font-size:13px; color:var(--red); margin-bottom:15px;">⚠️ ریسٹور کرنے سے موجودہ تمام ڈیٹا تبدیل ہو جائے گا۔</p>
+    <input type="file" id="restoreFile" accept=".json" style="background:#111; color:#fff; padding:8px; border-radius:8px; border:1px solid #333; width:100%; max-width:400px; font-family:inherit;" />
+    <button class="backup-btn" style="background:var(--red);" onclick="importBackup()">📤 ریسٹور کریں</button>
+  </div>
+</section>
+
+<!-- میری پروفائل -->
+<section id="myProfile" class="tab-content">
+  <h2>👤 میری پروفائل</h2>
+  <div id="myProfileBox"></div>
+</section>
+
+<!-- سیلری ادائیگی ماڈل -->
+<div class="modal" id="salaryModal">
+  <button class="close-modal" onclick="closeSalaryModal()">×</button>
+  <h3>💰 سیلری ادائیگی</h3>
+  <div id="salaryModalContent"></div>
+</div>
+
+<!-- پرنٹ رسیپٹ -->
+<div id="receipt-area">
+  <div class="receipt-box">
+    <div class="receipt-header"><h2>FAIZY MART</h2><p>Everything You Need, One Place</p></div>
+    <div class="receipt-row"><strong>آرڈر نمبر:</strong> <span id="r-order-no"></span></div>
+    <div class="receipt-row"><strong>تاریخ:</strong> <span id="r-date"></span></div>
+    <div class="receipt-row"><strong>آرڈر کرنے والا:</strong> <span id="r-emp-name"></span></div>
+    <div class="receipt-row"><strong>کسٹمر:</strong> <span id="r-customer"></span></div>
+    <div class="receipt-row"><strong>ایڈریس:</strong> <span id="r-address"></span></div>
+    <div class="receipt-row"><strong>شہر:</strong> <span id="r-city"></span></div>
+    <div class="receipt-row"><strong>کیٹگری:</strong> <span id="r-category"></span></div>
+    <div class="receipt-row"><strong>پروڈکٹ:</strong> <span id="r-product"></span></div>
+    <div class="receipt-row"><strong>پیمنٹ:</strong> <span id="r-payment"></span></div>
+    <div class="receipt-row"><strong>اسٹیٹس:</strong> <span id="r-status"></span></div>
+    <div class="receipt-total"><span>کل رقم:</span><span><span id="r-amount"></span> روپے</span></div>
+    <div class="receipt-footer">
+      <h3>حافظ محمد فیضان رضا عطّاری</h3>
+      <p>ایڈمن - فیضی مارٹ</p>
+      <p style="font-weight:bold; color:#000;">رابطہ: 03701304868</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== ماسٹر ایڈمن ======
+const MASTER_ADMIN_ID = "Faizan-e-raza";
+const MASTER_ADMIN_PASS = "Faizymart@313";
+
+// ====== ڈیٹا ======
+let employees = JSON.parse(localStorage.getItem("fm_employees")) || [];
+let orders = JSON.parse(localStorage.getItem("fm_orders")) || [];
+let admins = JSON.parse(localStorage.getItem("fm_admins")) || [];
+let currentAdmin = JSON.parse(localStorage.getItem("fm_currentAdmin")) || null;
+let salaryPayments = JSON.parse(localStorage.getItem("fm_salary_payments")) || [];
+let brandLogo = localStorage.getItem("fm_brandLogo") || "";
+
+let CATALOG = JSON.parse(localStorage.getItem("fm_catalog")) || {
+  "COSMETICS": [], "DRONES": [], "TOYS": [], "GADGETS": [], "HOME PRODUCTS": []
+};
+
+const DEFAULT_IMAGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1'><rect x='3' y='3' width='18' height='18' rx='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+
+function saveData() {
+  localStorage.setItem("fm_employees", JSON.stringify(employees));
+  localStorage.setItem("fm_orders", JSON.stringify(orders));
+  localStorage.setItem("fm_admins", JSON.stringify(admins));
+  localStorage.setItem("fm_catalog", JSON.stringify(CATALOG));
+  localStorage.setItem("fm_salary_payments", JSON.stringify(salaryPayments));
+}
+
+// ====== سائیڈ بار ======
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("overlay").classList.toggle("show");
+}
+
+// ====== لوگو سسٹم (صرف ایڈمن) ======
+function applyBrandLogo() {
+  const img = document.getElementById("headerLogoImg");
+  const fallback = document.getElementById("logoFallback");
+  const wrap = document.getElementById("headerLogo");
+  const hint = document.getElementById("logoEditHint");
+  if (!img || !fallback || !wrap || !hint) return;
+
+  if (brandLogo) {
+    img.src = brandLogo;
+    img.style.display = "block";
+    fallback.style.display = "none";
+  } else {
+    img.style.display = "none";
+    fallback.style.display = "block";
+  }
+
+  if (isSuperAdmin()) {
+    wrap.classList.add("admin-clickable");
+    wrap.title = "لوگو تبدیل کریں (کلک کریں)";
+    hint.style.display = "flex";
+  } else {
+    wrap.classList.remove("admin-clickable");
+    wrap.title = "فیضی مارٹ";
+    hint.style.display = "none";
+  }
+}
+
+function handleLogoClick() {
+  if (!isSuperAdmin()) {
+    alert("🔒 صرف ایڈمن لوگو تبدیل کر سکتا ہے۔");
+    return;
+  }
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("⚠️ تصویر 2MB سے کم ہونی چاہیے"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      brandLogo = ev.target.result;
+      localStorage.setItem("fm_brandLogo", brandLogo);
+      applyBrandLogo();
+      alert("✅ لوگو تبدیل ہو گیا! تمام وزیٹرز کو نظر آئے گا۔");
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function resetBrandLogo() {
+  if (!isSuperAdmin()) { alert("🔒 صرف ایڈمن!"); return; }
+  if (!confirm("لوگو ہٹا کر ڈیفالٹ ٹیکسٹ پر واپس لائیں؟")) return;
+  brandLogo = "";
+  localStorage.removeItem("fm_brandLogo");
+  applyBrandLogo();
+  alert("✅ ڈیفالٹ لوگو بحال!");
+}
+
+// ====== لاگ ان ======
+window.addEventListener("load", () => {
+  checkLoginState();
+  updateOrderNoField();
+  generateNextEmpId();
+  applyBrandLogo();
+  document.getElementById("headerLogo").addEventListener("click", handleLogoClick);
+});
+
+function checkLoginState() {
+  document.body.classList.remove("is-super-admin", "is-sub-admin");
+  const loginBtn = document.getElementById("adminLoginBtn");
+  const logoutBtn = document.getElementById("adminLogoutBtn");
+  const statusText = document.getElementById("adminStatusText");
+
+  if (currentAdmin) {
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    if (currentAdmin.role === "super") {
+      document.body.classList.add("is-super-admin");
+      statusText.textContent = "👑 سپر ایڈمن";
+    } else {
+      document.body.classList.add("is-sub-admin");
+      statusText.textContent = `👋 ${currentAdmin.name}`;
+      renderMyProfile();
+    }
+  } else {
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    statusText.textContent = "👋 خوش آمدید!";
+    showTab('home');
+  }
+  applyBrandLogo();
+}
+
+function adminLogin() {
+  const id = prompt("آئی ڈی:");
+  if (!id) return;
+  const pass = prompt("پاس ورڈ:");
+  if (id === MASTER_ADMIN_ID && pass === MASTER_ADMIN_PASS) {
+    currentAdmin = { role: "super", name: "حافظ محمد فیضان رضا عطّاری" };
+    localStorage.setItem("fm_currentAdmin", JSON.stringify(currentAdmin));
+    checkLoginState(); showTab('orders'); alert("✅ لاگ ان!");
+  } else {
+    const found = admins.find(a => a.empId === id && a.password === pass);
+    if (found) {
+      const emp = employees.find(e => e.empId === found.empId);
+      if (emp && emp.active === false) { alert("❌ آپ کا اکاؤنٹ غیر فعال ہے!"); return; }
+      currentAdmin = { role: "sub", empId: found.empId, name: found.name };
+      localStorage.setItem("fm_currentAdmin", JSON.stringify(currentAdmin));
+      checkLoginState(); showTab('myProfile'); alert("✅ لاگ ان!");
+    } else { alert("❌ غلط!"); }
+  }
+}
+
+function adminLogout() {
+  currentAdmin = null; localStorage.removeItem("fm_currentAdmin");
+  checkLoginState(); alert("🚪 لاگ آؤٹ!");
+}
+
+// ====== ٹیب سوئچ ======
+function showTab(tabName) {
+  document.querySelectorAll(".tab-content").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".sidebar .tab-btn").forEach(b => b.classList.remove("active"));
+  const sec = document.getElementById(tabName);
+  if (sec) sec.classList.add("active");
+  const btn = document.querySelector(`.sidebar .tab-btn[data-tab="${tabName}"]`);
+  if (btn) btn.classList.add("active");
+  if (tabName === "addOrder") updateOrderNoField();
+  if (tabName === "addEmployee") generateNextEmpId();
+  if (tabName === "empSearch") populateEmpSearchSelect();
+  if (tabName === "salary") renderSalaryList();
+  toggleSidebar();
+}
+
+// ====== خودکار ID ======
+function generateNextEmpId() {
+  let max = 100;
+  employees.forEach(e => { const m = e.empId.match(/FM-(\d+)/i); if (m) { const n = parseInt(m[1]); if (n > max) max = n; } });
+  const next = "FM-" + String(max + 1).padStart(4, "0");
+  const el = document.getElementById("empId");
+  if (el) el.value = next;
+  return next;
+}
+
+function updateOrderNoField() {
+  let max = 0;
+  orders.forEach(o => { const m = o.orderNo.match(/FM-ORD-(\d+)/); if (m) { const n = parseInt(m[1]); if (n > max) max = n; } });
+  const next = "FM-ORD-" + String(max + 1).padStart(3, "0");
+  const el = document.getElementById("orderNo");
+  if (el) el.value = next;
+}
+
+// ====== کیٹگری ======
+let currentCategory = "";
+function openCategory(cat) {
+  currentCategory = cat;
+  const icons = { "COSMETICS": "💄", "DRONES": "🚁", "TOYS": "🧸", "GADGETS": "🎧", "HOME PRODUCTS": "🏠" };
+  document.getElementById("catHeaderIcon").textContent = icons[cat] || "📦";
+  document.getElementById("catHeaderTitle").textContent = cat;
+  renderProducts();
+  showTab("categoryDetail");
+}
+
+function isAdmin() { return currentAdmin && (currentAdmin.role === "super" || currentAdmin.role === "sub"); }
+function isSuperAdmin() { return currentAdmin && currentAdmin.role === "super"; }
+
+function renderProducts() {
+  const list = document.getElementById("productList");
+  list.innerHTML = "";
+  const items = CATALOG[currentCategory] || [];
+  const visibleItems = isAdmin() ? items : items.filter(p => p.active !== false);
+  if (visibleItems.length === 0) {
+    list.innerHTML = `<div class="empty-msg" style="grid-column:1/-1;">کوئی آئٹم نہیں</div>`;
+    return;
+  }
+  visibleItems.forEach((p) => {
+    const index = items.indexOf(p);
+    const div = document.createElement("div");
+    div.className = "product-item";
+    const imgSrc = (p.images && p.images.length > 0) ? p.images[0] : DEFAULT_IMAGE;
+    const inactiveBadge = (p.active === false) ? `<span class="inactive-badge">غیر فعال</span>` : '';
+    let adminActions = '';
+    if (isSuperAdmin()) {
+      adminActions = `<button class="delete-prod" onclick="deleteProduct('${currentCategory}',${index})">×</button>`;
+    }
+    let buyBtn = '';
+    if (p.active !== false) {
+      buyBtn = `<button class="order-btn" onclick="quickOrder('${escapeStr(p.name)}',${p.price},'${currentCategory}')">🛒 آرڈر کریں</button>`;
+    } else {
+      buyBtn = `<button class="order-btn" disabled>دستیاب نہیں</button>`;
+    }
+    div.innerHTML = `
+      ${inactiveBadge}${adminActions}
+      <div class="product-img-box"><img src="${imgSrc}" alt="${p.name}" /></div>
+      <div class="product-info">
+        <h4>${p.name}</h4>
+        <p>${p.desc}</p>
+        ${p.stock !== undefined ? `<p style="font-size:11px;color:${p.stock>0?'#4ade80':'#ef4444'};">اسٹاک: ${p.stock}</p>` : ''}
+        <span class="price">${p.price.toLocaleString()} روپے</span>
+        ${buyBtn}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function escapeStr(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function quickOrder(name, price, cat) {
+  showTab('addOrder');
+  setTimeout(() => {
+    document.getElementById('product').value = name;
+    document.getElementById('amount').value = price;
+    document.getElementById('categorySelect').value = cat;
+  }, 200);
+}
+
+function openAddProductModal() {
+  if (!isAdmin()) { alert("صرف ایڈمن!"); return; }
+  document.getElementById("addProductForm").style.display = "block";
+  document.getElementById("prodCat").value = currentCategory;
+}
+function closeAddProductModal() {
+  document.getElementById("addProductForm").style.display = "none";
+  document.getElementById("addProductForm").reset();
+}
+
+document.getElementById("addProductForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!isAdmin()) { alert("صرف ایڈمن!"); return; }
+  const cat = document.getElementById("prodCat").value;
+  const name = document.getElementById("prodName").value.trim();
+  const desc = document.getElementById("prodDesc").value.trim();
+  const price = Number(document.getElementById("prodPrice").value);
+  const cost = Number(document.getElementById("prodCost").value) || 0;
+  const empPrice = Number(document.getElementById("prodEmpPrice").value) || 0;
+  const stock = Number(document.getElementById("prodStock").value) || 0;
+  const code = document.getElementById("prodCode").value.trim();
+  const dim = document.getElementById("prodDim").value.trim();
+  const active = document.getElementById("prodActive").value === "true";
+  const today = new Date().toISOString().slice(0,10);
+
+  const files = [1,2,3,4,5].map(n => document.getElementById("prodImg"+n).files[0]).filter(f => f);
+  let images = [];
+  let loaded = 0;
+
+  const finalize = (imgs) => {
+    if (!CATALOG[cat]) CATALOG[cat] = [];
+    CATALOG[cat].push({
+      name, desc, price, cost, empPrice, stock, code, dim, active,
+      images: imgs, createdAt: today, updatedAt: today
+    });
+    saveData(); renderProducts(); updateHomeCounts(); closeAddProductModal();
+    alert("✅ آئٹم شامل!");
+  };
+
+  if (files.length === 0) { finalize([]); return; }
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      images.push(ev.target.result);
+      loaded++;
+      if (loaded === files.length) finalize(images);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function deleteProduct(cat, index) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  if (!confirm("حذف کریں؟")) return;
+  CATALOG[cat].splice(index, 1); saveData(); renderProducts(); updateHomeCounts();
+}
+
+function updateHomeCounts() {
+  ["COSMETICS","DRONES","TOYS","GADGETS","HOME PRODUCTS"].forEach(c => {
+    const id = c === "HOME PRODUCTS" ? "count-home" : "count-" + c.toLowerCase().split(" ")[0];
+    const el = document.getElementById(id);
+    if (el) el.textContent = (CATALOG[c]||[]).filter(p => p.active !== false || isAdmin()).length;
+  });
+}
+
+// ====== ایمپلائی مینجمنٹ ======
+document.getElementById("employeeForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const emp = {
+    empId: document.getElementById("empId").value,
+    name: document.getElementById("empName").value.trim(),
+    age: Number(document.getElementById("empAge").value),
+    city: document.getElementById("empCity").value.trim(),
+    address: document.getElementById("empAddress").value.trim(),
+    mobile: document.getElementById("empMobile").value.trim(),
+    email: document.getElementById("empEmail").value.trim(),
+    dept: document.getElementById("empDept").value.trim(),
+    salary: Number(document.getElementById("empSalary").value) || 20000,
+    target: Number(document.getElementById("empTarget").value) || 40,
+    accName: document.getElementById("empAccName").value.trim(),
+    bank: document.getElementById("empBank").value.trim(),
+    accNo: document.getElementById("empAccNo").value.trim(),
+    password: document.getElementById("empPass").value.trim(),
+    active: true,
+    createdAt: new Date().toISOString().slice(0,10)
+  };
+  employees.push(emp);
+  saveData(); renderAll(); e.target.reset(); generateNextEmpId();
+  alert("✅ ایمپلائی شامل!");
+});
+
+function renderEmployees() {
+  const box = document.getElementById("employeeList");
+  box.innerHTML = "";
+  if (employees.length === 0) { box.innerHTML = `<div class="empty-msg">کوئی ایمپلائی نہیں</div>`; return; }
+
+  employees.forEach((emp, idx) => {
+    const empOrders = orders.filter(o => o.empType === "employee" && o.empId === emp.empId && isCompletedOrder(o));
+    const isAdm = admins.some(a => a.empId === emp.empId);
+    const card = document.createElement("div");
+    card.className = "card" + (emp.active === false ? " inactive" : "");
+    const activeLabel = emp.active === false ? '<span class="badge red">غیر فعال</span>' : '<span class="badge green">فعال</span>';
+    const bankInfo = isSuperAdmin()
+      ? `<p>🏦 ${emp.accName} - ${emp.bank || ''} - ${emp.accNo}</p><p>💰 سیلری: ${emp.salary.toLocaleString()} روپے</p>`
+      : `<p>🏦 بینک تفصیلات: 🔒 صرف ایڈمن</p>`;
+    card.innerHTML = `
+      <span class="fm-id">${emp.empId}</span>
+      <h3>${emp.name} ${isAdm?'<span style="font-size:10px;background:#facc15;color:#000;padding:2px 6px;border-radius:4px;">ایڈمن</span>':''}</h3>
+      <p>📱 ${emp.mobile}</p>
+      <p>🏙️ ${emp.city} | 🎂 ${emp.age} سال</p>
+      <p>🏢 شعبہ: ${emp.dept}</p>
+      ${bankInfo}
+      <p>🎯 ٹارگٹ: ${emp.target} آرڈرز</p>
+      <span class="badge">آرڈرز: ${empOrders.length}</span> ${activeLabel}
+      <div class="card-actions">
+        <button class="edit-btn" onclick="editEmployee(${idx})">✏️ ایڈٹ</button>
+        <button class="toggle-btn" onclick="toggleEmployee('${emp.empId}')">${emp.active === false ? '✅ فعال کریں' : '⛔ غیر فعال'}</button>
+        <button class="delete-btn" onclick="deleteEmployee('${emp.empId}')">🗑️ حذف</button>
+      </div>
+    `;
+    box.appendChild(card);
+  });
+  const activeCount = employees.filter(e => e.active !== false).length;
+  const totalTarget = employees.filter(e => e.active !== false).reduce((s,e) => s + (e.target||40), 0);
+  const tEl = document.getElementById("totalTargetDisplay");
+  if (tEl) tEl.textContent = `فعال ایمپلائیز: ${activeCount} | کل ماہانہ ہدف: ${totalTarget} آرڈرز`;
+}
+
+function toggleEmployee(id) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  const e = employees.find(x => x.empId === id);
+  if (!e) return;
+  e.active = e.active === false ? true : false;
+  saveData(); renderAll();
+  alert(e.active ? "✅ فعال کر دیا!" : "⛔ غیر فعال کر دیا!");
+}
+
+function editEmployee(index) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  const emp = employees[index];
+  const newName = prompt("نام:", emp.name); if (newName === null) return;
+  const newMobile = prompt("موبائل:", emp.mobile); if (newMobile === null) return;
+  const newCity = prompt("شہر:", emp.city); if (newCity === null) return;
+  const newDept = prompt("شعبہ:", emp.dept); if (newDept === null) return;
+  const newAge = prompt("عمر:", emp.age); if (newAge === null) return;
+  const newSalary = prompt("سیلری:", emp.salary); if (newSalary === null) return;
+  const newTarget = prompt("ٹارگٹ:", emp.target); if (newTarget === null) return;
+  const newAccName = prompt("اکاؤنٹ ٹائٹل:", emp.accName); if (newAccName === null) return;
+  const newBank = prompt("بینک:", emp.bank); if (newBank === null) return;
+  const newAccNo = prompt("اکاؤنٹ نمبر:", emp.accNo); if (newAccNo === null) return;
+
+  employees[index] = { ...emp, name: newName, mobile: newMobile, city: newCity, dept: newDept, age: Number(newAge), salary: Number(newSalary), target: Number(newTarget), accName: newAccName, bank: newBank, accNo: newAccNo };
+  saveData(); renderAll();
+  alert("✅ اپ ڈیٹ!");
+}
+
+function deleteEmployee(id) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  if (!confirm("حذف کریں؟ (اس کے آرڈرز بھی حذف ہوں گے)")) return;
+  employees = employees.filter(e => e.empId !== id);
+  orders = orders.filter(o => !(o.empType === "employee" && o.empId === id));
+  admins = admins.filter(a => a.empId !== id);
+  salaryPayments = salaryPayments.filter(p => p.empId !== id);
+  saveData(); renderAll();
+}
+
+// ====== ہدف کی پالیسی ======
+const CANCELLED_STATUSES = ["منسوخ شدہ", "واپس شدہ", "رقم کی واپسی", "واپسی کی درخواست"];
+function isCompletedOrder(o) { return !CANCELLED_STATUSES.includes(o.status); }
+
+// ====== ایمپلائی سرچ ======
+function populateEmpSearchSelect() {
+  const sel = document.getElementById("empSearchSelect");
+  sel.innerHTML = '<option value="">-- ایمپلائی منتخب کریں --</option>';
+  employees.forEach(emp => {
+    const opt = document.createElement("option");
+    opt.value = emp.empId;
+    opt.textContent = `${emp.empId} — ${emp.name}`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById("empSearchSelect").addEventListener("change", function() {
+  const q = this.value;
+  const box = document.getElementById("empSearchResult");
+  if (!q) { box.innerHTML = ""; return; }
+  const emp = employees.find(x => x.empId === q);
+  if (!emp) { box.innerHTML = `<div class="result-box error">نہیں ملا ❌</div>`; return; }
+  const empOrders = orders.filter(o => o.empType === "employee" && o.empId === emp.empId);
+  if (empOrders.length === 0) {
+    box.innerHTML = `<div class="result-box"><h3>${emp.name} (${emp.empId})</h3><p>کوئی آرڈر نہیں</p></div>`;
+    return;
+  }
+  const total = empOrders.reduce((s,o) => s + o.amount, 0);
+  let html = `<div class="result-box" style="border-right-color:#facc15;">
+    <h3>${emp.name} (${emp.empId})</h3>
+    <p>📱 ${emp.mobile} | 🏙️ ${emp.city} | 🏢 ${emp.dept}</p>
+    <p style="color:#facc15;font-weight:bold;">کل آرڈرز: ${empOrders.length} | رقم: ${total.toLocaleString()}</p>
+  </div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;">`;
+  empOrders.forEach(o => {
+    html += `<div class="result-box" style="margin-bottom:0;">
+      <p><strong>${o.orderNo}</strong> | ${o.customer}</p>
+      <p>${o.product} | ${o.amount.toLocaleString()} روپے</p>
+      <p>اسٹیٹس: ${o.status || "نیا"}</p>
+      <button class="print-btn" onclick="printOrder('${o.orderNo}')">🖨️ پرنٹ</button>
+    </div>`;
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+});
+
+// ====== آرڈرز ======
+const STATUS_LIST = ["نیا", "تصدیق شدہ", "پروسیسنگ", "پیک شدہ", "روانہ شدہ", "ڈیلیور شدہ", "منسوخ شدہ", "واپسی کی درخواست", "واپس شدہ", "رقم کی واپسی"];
+function statusClass(s) {
+  if (s === "ڈیلیور شدہ") return "delivered";
+  if (s === "روانہ شدہ" || s === "پیک شدہ" || s === "پروسیسنگ") return "dispatched";
+  if (s === "منسوخ شدہ") return "cancelled";
+  if (s === "واپس شدہ" || s === "واپسی کی درخواست" || s === "رقم کی واپسی") return "returned";
+  return "pending";
+}
+
+function renderOrders() {
+  const tbody = document.querySelector("#ordersTable tbody");
+  tbody.innerHTML = "";
+  let list = orders.slice();
+  if (currentAdmin && currentAdmin.role === "sub") {
+    list = list.filter(o => o.empType === "employee" && o.empId === currentAdmin.empId);
+  }
+  if (list.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">کوئی آرڈر نہیں</td></tr>`; return; }
+  list.sort((a,b) => (b.date||"").localeCompare(a.date||"")).forEach(o => {
+    const cls = statusClass(o.status);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${o.orderNo}</td><td>${o.customer}</td><td>${o.product}</td>
+      <td>${o.amount.toLocaleString()}</td><td>${o.paymentMethod}</td>
+      <td><button class="status-btn ${cls}" onclick="changeStatus('${o.orderNo}')">${o.status || "نیا"}</button></td>
+      <td><button class="print-btn" onclick="printOrder('${o.orderNo}')">🖨️</button><button class="del-btn" onclick="deleteOrder('${o.orderNo}')">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function changeStatus(no) {
+  if (!isAdmin()) { alert("صرف ایڈمن!"); return; }
+  const o = orders.find(x => x.orderNo === no);
+  if (!o) return;
+  const cur = STATUS_LIST.indexOf(o.status);
+  const next = STATUS_LIST[(cur + 1) % STATUS_LIST.length];
+  o.status = next;
+  saveData(); renderAll();
+}
+
+function deleteOrder(no) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  if (!confirm("حذف کریں؟")) return;
+  orders = orders.filter(o => o.orderNo !== no);
+  saveData(); renderAll();
+}
+
+// ====== مہینے کے آرڈرز ======
+function renderMonthlyOrders() {
+  const month = document.getElementById("monthlyOrdersFilter").value;
+  const tbody = document.querySelector("#monthlyOrdersTable tbody");
+  tbody.innerHTML = "";
+  if (!month) { tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">مہینہ منتخب کریں</td></tr>`; return; }
+  const filtered = orders.filter(o => o.date && o.date.startsWith(month));
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty-msg">کوئی آرڈر نہیں</td></tr>`; return; }
+  filtered.forEach(o => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${o.date}</td><td>${o.orderNo}</td><td>${o.customer}</td><td>${o.address}</td><td>${o.product}</td><td>${o.amount.toLocaleString()}</td><td>${o.status||"نیا"}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById("monthlyOrdersFilter").addEventListener("change", renderMonthlyOrders);
+
+// ====== نیا آرڈر ======
+function populateEmpSelect() {
+  const sel = document.getElementById("empSelect");
+  sel.innerHTML = '<option value="">-- منتخب کریں --</option>';
+  employees.filter(e => e.active !== false).forEach(emp => {
+    const opt = document.createElement("option");
+    opt.value = emp.empId;
+    opt.textContent = `${emp.empId} — ${emp.name}`;
+    sel.appendChild(opt);
+  });
+}
+
+document.querySelectorAll('input[name="empType"]').forEach(r => {
+  r.addEventListener("change", () => {
+    const v = document.querySelector('input[name="empType"]:checked').value;
+    document.getElementById("employeeSelectBox").style.display = v === "employee" ? "block" : "none";
+    document.getElementById("nonEmployeeBox").style.display = v === "non-employee" ? "block" : "none";
+  });
+});
+
+document.getElementById("orderForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const no = document.getElementById("orderNo").value;
+  let type = document.querySelector('input[name="empType"]:checked').value;
+  if (currentAdmin && currentAdmin.role === "sub") {
+    type = "employee";
+  }
+  const today = new Date();
+  const ds = today.getFullYear() + "-" + String(today.getMonth()+1).padStart(2,'0') + "-" + String(today.getDate()).padStart(2,'0');
+
+  const fiveMinAgo = Date.now() - 5*60*1000;
+  const dup = orders.find(o => o.customer === document.getElementById("customer").value.trim() && o.product === document.getElementById("product").value.trim() && o.amount === Number(document.getElementById("amount").value) && o.createdAt && new Date(o.createdAt).getTime() > fiveMinAgo);
+  if (dup) { alert("⚠️ مشتبہ ڈپلیکیٹ آرڈر! 5 منٹ پہلے بھی ایسا ہی آرڈر آیا ہے۔"); return; }
+
+  const baseAmount = Number(document.getElementById("amount").value);
+  const discount = Number(document.getElementById("discount").value) || 0;
+  const delivery = Number(document.getElementById("deliveryCharge").value) || 0;
+  const finalAmount = baseAmount - discount + delivery;
+  const qty = Number(document.getElementById("qty").value) || 1;
+
+  let o = {
+    orderNo: no, empType: type,
+    customer: document.getElementById("customer").value.trim(),
+    customerMobile: document.getElementById("customerMobile").value.trim(),
+    address: document.getElementById("address").value.trim(),
+    city: document.getElementById("city").value.trim(),
+    category: document.getElementById("categorySelect").value,
+    product: document.getElementById("product").value.trim(),
+    qty: qty,
+    baseAmount: baseAmount,
+    discount: discount,
+    deliveryCharge: delivery,
+    amount: finalAmount,
+    paymentMethod: document.getElementById("paymentMethod").value,
+    date: ds, status: "نیا",
+    createdAt: new Date().toISOString()
+  };
+
+  if (type === "employee") {
+    let id;
+    if (currentAdmin && currentAdmin.role === "sub") {
+      id = currentAdmin.empId;
+    } else {
+      id = document.getElementById("empSelect").value;
+    }
+    if (!id) { alert("ایمپلائی منتخب کریں!"); return; }
+    const emp = employees.find(x => x.empId === id);
+    if (!emp || emp.active === false) { alert("ایمپلائی فعال نہیں!"); return; }
+    o.empId = emp.empId; o.empName = emp.name;
+  } else {
+    const n = document.getElementById("nonEmpName").value.trim();
+    if (!n) { alert("نام لکھیں!"); return; }
+    o.empName = n; o.empMobile = document.getElementById("nonEmpMobile").value.trim();
+  }
+
+  orders.push(o); saveData(); renderAll(); e.target.reset();
+  document.getElementById("employeeSelectBox").style.display = "block";
+  document.getElementById("nonEmployeeBox").style.display = "none";
+  updateOrderNoField();
+  alert("✅ آرڈر محفوظ!"); printOrder(o.orderNo);
+});
+
+// ====== سیلری سسٹم ======
+function getCompletedOrdersForMonth(empId, monthKey) {
+  return orders.filter(o =>
+    o.empType === "employee" && o.empId === empId &&
+    o.date && o.date.startsWith(monthKey) &&
+    isCompletedOrder(o)
+  );
+}
+
+function computeSalary(emp, monthKey) {
+  const base = emp.salary || 20000;
+  const target = emp.target || 40;
+  const completed = getCompletedOrdersForMonth(emp.empId, monthKey).length;
+  const rate = target > 0 ? (completed / target) : 0;
+  const earnedRaw = base * rate;
+  const earned = Math.min(earnedRaw, base * 2);
+  const payments = salaryPayments.filter(p => p.empId === emp.empId && p.month === monthKey);
+  const paid = payments.reduce((s,p) => s + p.amount, 0);
+  const due = Math.max(0, earned - paid);
+  const targetMet = completed >= target;
+  return { base, target, completed, earned: Math.round(earned), paid, due: Math.round(due), targetMet, rate: Math.min(rate, 2) };
+}
+
+function renderSalaryList() {
+  const box = document.getElementById("salaryList");
+  if (!box) return;
+  box.innerHTML = "";
+  const monthKey = new Date().toISOString().slice(0,7);
+  const activeEmps = employees.filter(e => e.active !== false);
+  if (activeEmps.length === 0) {
+    box.innerHTML = `<div class="empty-msg" style="grid-column:1/-1;">کوئی فعال ایمپلائی نہیں</div>`;
+    return;
+  }
+  let totalPending = 0, totalPaid = 0, totalDue = 0;
+  activeEmps.forEach(emp => {
+    const s = computeSalary(emp, monthKey);
+    if (s.targetMet && s.due > 0) totalPending++;
+    totalPaid += s.paid;
+    totalDue += s.due;
+
+    const card = document.createElement("div");
+    card.className = "card salary-card" + (s.targetMet && s.due > 0 ? " pending" : "");
+    const pct = Math.min(100, Math.round((s.completed / s.target) * 100));
+    const statusBadge = s.targetMet
+      ? (s.due > 0 ? '<span class="badge amber">🟡 سیلری پینڈنگ</span>' : '<span class="badge green">✅ ادا شدہ</span>')
+      : '<span class="badge">⏳ جاری</span>';
+    card.innerHTML = `
+      <span class="fm-id">${emp.empId}</span>
+      <h3>${emp.name}</h3>
+      ${statusBadge}
+      <div class="salary-progress"><div style="width:${pct}%"></div></div>
+      <div class="salary-row"><strong>ماہانہ ہدف:</strong><span>${s.target} آرڈرز</span></div>
+      <div class="salary-row"><strong>مکمل شدہ:</strong><span>${s.completed} (${pct}%)</span></div>
+      <div class="salary-row"><strong>بنیادی سیلری:</strong><span>${s.base.toLocaleString()} روپے</span></div>
+      <div class="salary-row"><strong>قابل سیلری:</strong><span style="color:var(--green)">${s.earned.toLocaleString()} روپے</span></div>
+      <div class="salary-row"><strong>ادا شدہ:</strong><span style="color:var(--accent-blue)">${s.paid.toLocaleString()} روپے</span></div>
+      <div class="salary-row"><strong>باقی:</strong><span style="color:${s.due>0?'var(--amber)':'var(--green)'}">${s.due.toLocaleString()} روپے</span></div>
+      <div class="salary-actions">
+        <button class="salary-btn" onclick="openSalaryModal('${emp.empId}')">💳 ادائیگی کریں</button>
+        <button class="salary-btn green" onclick="viewSalaryHistory('${emp.empId}')">📜 تاریخ</button>
+      </div>
+    `;
+    box.appendChild(card);
+  });
+  const disp = document.getElementById("salaryTargetDisplay");
+  if (disp) disp.textContent = `پینڈنگ سیلریز: ${totalPending} | کل ادا شدہ: ${totalPaid.toLocaleString()} | کل باقی: ${totalDue.toLocaleString()} روپے`;
+}
+
+function openSalaryModal(empId) {
+  const emp = employees.find(e => e.empId === empId);
+  if (!emp) return;
+  const monthKey = new Date().toISOString().slice(0,7);
+  const s = computeSalary(emp, monthKey);
+  const modal = document.getElementById("salaryModal");
+  const c = document.getElementById("salaryModalContent");
+  c.innerHTML = `
+    <p style="margin-bottom:10px;"><strong>${emp.name}</strong> (${emp.empId})</p>
+    <div class="salary-row"><strong>قابل سیلری:</strong><span>${s.earned.toLocaleString()} روپے</span></div>
+    <div class="salary-row"><strong>ادا شدہ:</strong><span>${s.paid.toLocaleString()} روپے</span></div>
+    <div class="salary-row"><strong>باقی:</strong><span style="color:var(--amber)">${s.due.toLocaleString()} روپے</span></div>
+    <hr style="margin:15px 0; border-color:#333;">
+    <label>ادائیگی رقم (روپے) <input type="number" id="salPayAmount" min="0" max="${s.due}" value="${s.due}" style="background:#111; color:#fff; border:1px solid #444; padding:8px; border-radius:6px; width:100%; margin-top:5px;" /></label>
+    <label>نوٹ (اختیاری) <input type="text" id="salNote" placeholder="مثلاً ماہ اکتوبر" style="background:#111; color:#fff; border:1px solid #444; padding:8px; border-radius:6px; width:100%; margin-top:5px;" /></label>
+    <label>ادائیگی کا اسکرین شاٹ <input type="file" id="salScreenshot" accept="image/*" style="background:#111; color:#fff; padding:5px; border-radius:6px; width:100%; margin-top:5px;" /></label>
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button class="salary-btn green" onclick="submitSalaryPayment('${empId}')">✅ ادائیگی محفوظ کریں</button>
+      <button class="salary-btn red" onclick="closeSalaryModal()">منسوخ</button>
+    </div>
+  `;
+  modal.classList.add("show");
+}
+
+function closeSalaryModal() {
+  document.getElementById("salaryModal").classList.remove("show");
+}
+
+function submitSalaryPayment(empId) {
+  const amount = Number(document.getElementById("salPayAmount").value);
+  if (!amount || amount <= 0) { alert("رقم درج کریں!"); return; }
+  const note = document.getElementById("salNote").value.trim();
+  const file = document.getElementById("salScreenshot").files[0];
+  const monthKey = new Date().toISOString().slice(0,7);
+
+  const finalize = (screenshotData) => {
+    salaryPayments.push({
+      id: "SAL-" + Date.now(),
+      empId, month: monthKey,
+      amount, note,
+      screenshot: screenshotData || "",
+      date: new Date().toISOString(),
+      paidBy: currentAdmin ? currentAdmin.name : "Admin"
+    });
+    saveData(); closeSalaryModal(); renderSalaryList();
+    alert("✅ ادائیگی محفوظ! اسکرین شاٹ بھی محفوظ ہو گیا۔");
+  };
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (ev) => finalize(ev.target.result);
+    reader.readAsDataURL(file);
+  } else {
+    finalize("");
+  }
+}
+
+function viewSalaryHistory(empId) {
+  const emp = employees.find(e => e.empId === empId);
+  const history = salaryPayments.filter(p => p.empId === empId).sort((a,b) => b.date.localeCompare(a.date));
+  if (history.length === 0) { alert("کوئی ادائیگی نہیں"); return; }
+  let msg = `📜 ${emp.name} کی سیلری تاریخ:\n\n`;
+  history.forEach(h => {
+    msg += `📅 ${h.date.slice(0,10)} | ${h.month}\n💰 ${h.amount.toLocaleString()} روپے\n${h.note ? '📝 '+h.note+'\n' : ''}${h.screenshot ? '🖼️ اسکرین شاٹ محفوظ\n' : ''}\n`;
+  });
+  alert(msg);
+}
+
+// ====== رپورٹس ======
+function renderTotalReport() {
+  const tbody = document.querySelector("#totalReport tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  const q = (document.getElementById("reportSearchInput")?.value || "").toLowerCase();
+  const map = {};
+  orders.forEach(o => {
+    if (q && !(o.orderNo.toLowerCase().includes(q) || (o.empName||"").toLowerCase().includes(q) || (o.customer||"").toLowerCase().includes(q))) return;
+    const k = o.empType === "employee" ? "E_" + o.empId : "C_" + o.empName;
+    if (!map[k]) map[k] = { type: o.empType, id: o.empId, name: o.empName, orders: [] };
+    map[k].orders.push(o);
+  });
+  if (Object.keys(map).length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">کوئی ریکارڈ نہیں</td></tr>`; return; }
+  Object.values(map).forEach(p => {
+    const amt = p.orders.reduce((s,o) => s + o.amount, 0);
+    const nos = p.orders.map(o => o.orderNo).join(", ");
+    let name = p.name;
+    if (p.type === "employee") { const e = employees.find(x => x.empId === p.id); if (e) name = e.name; }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${name}</td><td>${p.orders.length}</td><td>${amt.toLocaleString()}</td><td>${nos}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("reportSearchInput")?.addEventListener("input", renderTotalReport);
+
+function exportCSV() {
+  let csv = "OrderNo,Date,Employee,Customer,Product,Amount,Payment,Status\n";
+  orders.forEach(o => {
+    csv += `"${o.orderNo}","${o.date}","${o.empName||''}","${o.customer}","${o.product}",${o.amount},"${o.paymentMethod}","${o.status||''}"\n`;
+  });
+  downloadFile(csv, "faizy-mart-orders.csv", "text/csv");
+}
+
+// ====== آرڈر سرچ ======
+document.getElementById("searchInput")?.addEventListener("input", function() {
+  const q = this.value.trim().toLowerCase();
+  const box = document.getElementById("searchResult");
+  if (!q) { box.innerHTML = ""; return; }
+  const found = orders.filter(o => o.orderNo.toLowerCase().includes(q));
+  if (found.length === 0) { box.innerHTML = `<div class="result-box error">نہیں ملا ❌</div>`; return; }
+  box.innerHTML = found.map(o => `<div class="result-box">
+    <p><strong>${o.orderNo}</strong> | ${o.customer} | ${o.product} | ${o.amount.toLocaleString()} روپے</p>
+    <p>اسٹیٹس: ${o.status||"نیا"}</p>
+    <button class="print-btn" onclick="printOrder('${o.orderNo}')">🖨️ پرنٹ</button>
+  </div>`).join("");
+});
+
+// ====== ایڈمن مینجمنٹ ======
+function renderAdminManage() {
+  const tbody = document.querySelector("#adminManageTable tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (employees.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="empty-msg">کوئی ایمپلائی نہیں</td></tr>`; return; }
+  employees.forEach(emp => {
+    const isAdm = admins.some(a => a.empId === emp.empId);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${emp.empId}</td><td>${emp.name}</td><td>${isAdm?'<span style="color:#4ade80;">ایڈمن</span>':'عام'}</td>
+    <td>${isAdm ? `<button class="del-btn" onclick="removeAdmin('${emp.empId}')">ہٹائیں</button>` : `<button class="print-btn" onclick="makeAdmin('${emp.empId}')">ایڈمن بنائیں</button>`}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function makeAdmin(id) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  const emp = employees.find(e => e.empId === id);
+  if (!emp.password) { alert("پاس ورڈ نہیں!"); return; }
+  admins.push({ empId: emp.empId, name: emp.name, password: emp.password });
+  saveData(); renderAdminManage(); alert("✅ ایڈمن بنا دیا!");
+}
+
+function removeAdmin(id) {
+  if (!isSuperAdmin()) { alert("صرف سپر ایڈمن!"); return; }
+  if (!confirm("ہٹائیں؟")) return;
+  admins = admins.filter(a => a.empId !== id);
+  saveData(); renderAdminManage(); alert("✅ ہٹا دیا!");
+}
+
+// ====== سب ایڈمن پروفائل ======
+function renderMyProfile() {
+  if (!currentAdmin || currentAdmin.role !== "sub") return;
+  const box = document.getElementById("myProfileBox");
+  const emp = employees.find(e => e.empId === currentAdmin.empId);
+  if (!emp) { box.innerHTML = `<div class="empty-msg">پروفائل نہیں</div>`; return; }
+  const my = orders.filter(o => o.empType === "employee" && o.empId === emp.empId);
+  const total = my.reduce((s,o) => s + o.amount, 0);
+  const monthKey = new Date().toISOString().slice(0,7);
+  const s = computeSalary(emp, monthKey);
+  const rem = Math.max(0, (emp.target || 40) - s.completed);
+
+  const salHtml = s.targetMet
+    ? `<div style="background:#1a2e1a;color:#4ade80;padding:15px;border-radius:10px;text-align:center;margin-bottom:20px;">🎉 ٹارگٹ مکمل! قابل سیلری: ${s.earned.toLocaleString()} روپے | ادا شدہ: ${s.paid.toLocaleString()} | باقی: ${s.due.toLocaleString()}</div>`
+    : `<div style="background:#2e2a1a;color:#facc15;padding:10px;border-radius:10px;text-align:center;margin-bottom:20px;">سیلری کے لیے ${rem} آرڈرز باقی (${s.completed}/${s.target})</div>`;
+
+  let html = `<div class="result-box" style="border-right-color:#facc15;">
+    <h3>${emp.name} (${emp.empId})</h3>
+    <p>📱 ${emp.mobile} | 🏙️ ${emp.city} | 🏢 ${emp.dept}</p>
+    <p>🎯 ٹارگٹ: ${emp.target} | مکمل: ${s.completed} | باقی: ${rem}</p>
+    <p>💰 بنیادی سیلری: ${(emp.salary||20000).toLocaleString()} | قابل: ${s.earned.toLocaleString()}</p>
+    <p style="color:#facc15;font-weight:bold;">کل آرڈرز: ${my.length} | رقم: ${total.toLocaleString()}</p>
+  </div>${salHtml}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;">`;
+  my.forEach(o => {
+    html += `<div class="result-box" style="margin-bottom:0;">
+      <p><strong>${o.orderNo}</strong> | ${o.customer}</p>
+      <p>${o.product} | ${o.amount.toLocaleString()} روپے</p>
+      <p>اسٹیٹس: ${o.status||"نیا"}</p>
+      <button class="print-btn" onclick="printOrder('${o.orderNo}')">🖨️</button>
+    </div>`;
+  });
+  html += `</div>`;
+  box.innerHTML = html;
+}
+
+// ====== پرنٹ ======
+function printOrder(no) {
+  const o = orders.find(x => x.orderNo === no);
+  if (!o) return;
+  document.getElementById("r-order-no").textContent = o.orderNo;
+  document.getElementById("r-date").textContent = o.date;
+  let dn = o.empName;
+  if (o.empType === "employee") { const e = employees.find(x => x.empId === o.empId); if (e) dn = `${e.name} (${e.empId})`; }
+  else dn = `${o.empName} (نان ایمپلائی)`;
+  document.getElementById("r-emp-name").textContent = dn;
+  document.getElementById("r-customer").textContent = o.customer;
+  document.getElementById("r-address").textContent = o.address;
+  document.getElementById("r-city").textContent = o.city;
+  document.getElementById("r-category").textContent = o.category;
+  document.getElementById("r-product").textContent = o.product;
+  document.getElementById("r-amount").textContent = o.amount.toLocaleString();
+  document.getElementById("r-payment").textContent = o.paymentMethod;
+  document.getElementById("r-status").textContent = o.status || "نیا";
+  window.print();
+}
+
+// ====== بیک اپ / ریسٹور ======
+function exportBackup() {
+  const data = {
+    employees, orders, admins, CATALOG, salaryPayments, brandLogo,
+    exportedAt: new Date().toISOString(),
+    version: "1.1"
+  };
+  downloadFile(JSON.stringify(data, null, 2), "faizy-mart-backup-" + new Date().toISOString().slice(0,10) + ".json", "application/json");
+}
+
+function importBackup() {
+  const file = document.getElementById("restoreFile").files[0];
+  if (!file) { alert("فائل منتخب کریں!"); return; }
+  if (!confirm("⚠️ موجودہ ڈیٹا تبدیل ہو جائے گا۔ جاری رکھیں؟")) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.employees) employees = data.employees;
+      if (data.orders) orders = data.orders;
+      if (data.admins) admins = data.admins;
+      if (data.CATALOG) CATALOG = data.CATALOG;
+      if (data.salaryPayments) salaryPayments = data.salaryPayments;
+      if (data.brandLogo !== undefined) {
+        brandLogo = data.brandLogo || "";
+        if (brandLogo) localStorage.setItem("fm_brandLogo", brandLogo);
+        else localStorage.removeItem("fm_brandLogo");
+      }
+      saveData(); renderAll(); applyBrandLogo();
+      alert("✅ ریسٹور کامیاب!");
+    } catch (e) { alert("❌ غلط فائل: " + e.message); }
+  };
+  reader.readAsText(file);
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ====== ری فریش ======
+function renderAll() {
+  renderEmployees();
+  renderOrders();
+  renderMonthlyOrders();
+  populateEmpSelect();
+  renderTotalReport();
+  renderAdminManage();
+  renderSalaryList();
+  if (currentAdmin?.role === "sub") renderMyProfile();
+  updateHomeCounts();
+  applyBrandLogo();
+}
+
+renderAll();
+</script>
+</body>
+</html>
